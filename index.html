@@ -6,6 +6,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d1218">
+<meta name="description" content="A 3D third-person pack battler: Arctic wolves vs Jungle wolves.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   :root { --arctic:#7fd4ff; --jungle:#8be36b; --panel:rgba(14,20,28,.82); --line:rgba(255,255,255,.14); }
   * { box-sizing:border-box; }
@@ -688,6 +694,8 @@ function startBattle() {
   }
   yaw = player.heading; pitch = 0.3; shake = 0; time = 0; battleTime = 0; endTimer = 0; endResult = ''; hurt = 0;
   countdown = 3.4; state = 'countdown'; paused = false;
+  keepAwake(true);
+  if (!(history.state && history.state.battle)) history.pushState({ battle: true }, '');
   $('#pname').textContent = player.name + ' · ' + FACTIONS[mine].name;
   $('#feed').innerHTML = ''; $('#hint').style.opacity = 0.85; resetTouch();
   $('#hint').textContent = touchMode
@@ -972,7 +980,7 @@ function lock() { if (touchMode) return; try { const r = canvas.requestPointerLo
 function unlock() { hadLock = false; if (document.pointerLockElement) document.exitPointerLock(); }
 
 function gotoFaction() {
-  state = 'faction'; unlock(); show('faction'); clearPreviews();
+  state = 'faction'; unlock(); show('faction'); clearPreviews(); keepAwake(false);
   makePreview(defaultCfg('arctic'), -2.1, Math.PI / 2 - 0.55); makePreview(defaultCfg('jungle'), 2.1, -(Math.PI / 2 - 0.55));
   pads.arctic.visible = pads.jungle.visible = true;
   menuLayout();
@@ -1030,8 +1038,20 @@ $('#cz-random').onclick = () => { playerCfg = randomCfg(playerCfg.faction, playe
 $('#cz-go').onclick = () => { sfx.init(); clearPreviews(); startBattle(); lock(); };
 document.querySelectorAll('[data-faction]').forEach(b => b.onclick = () => { sfx.init(); gotoCustom(b.dataset.faction, false); });
 
+// keep the screen on during a battle (installed app / phones)
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && !wakeLock && navigator.wakeLock && !document.hidden) { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    else if (!on && wakeLock) { const w = wakeLock; wakeLock = null; await w.release(); }
+  } catch (e) { wakeLock = null; }
+}
+// Android back button: pause mid-battle instead of leaving the app
+addEventListener('popstate', () => {
+  if (state === 'battle' || state === 'countdown') { history.pushState({ battle: true }, ''); if (!paused) { unlock(); setPaused(true); } }
+});
 function showEnd() {
-  state = 'over'; unlock(); resetTouch();
+  state = 'over'; unlock(); resetTouch(); keepAwake(false);
   const mine = FACTIONS[player.team], foe = FACTIONS[other(player.team)];
   const left = fighters.filter(f => f.team === player.team && f.state === 'fight').length;
   const foesLeft = fighters.filter(f => f.team !== player.team && f.state === 'fight').length;
@@ -1131,7 +1151,10 @@ tbtn('#tb-attack', t => {   // hold to keep attacking; dragging from the button 
 tbtn('#tb-pounce', () => playerPounce());
 tbtn('#tb-howl', () => playerHowl());
 tbtn('#tb-pause', () => setPaused(true));
-document.addEventListener('visibilitychange', () => { if (document.hidden && inFight() && !paused) { unlock(); setPaused(true); } });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && inFight() && !paused) { unlock(); setPaused(true); }
+  if (!document.hidden && inFight()) keepAwake(true);
+});
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 /* ───────────────────────── main loop ───────────────────────── */
@@ -1169,6 +1192,7 @@ window.__wolf = { get state() { return state; }, get fighters() { return fighter
   step(n = 1, dt = 1 / 60) { for (let i = 0; i < n; i++) updateBattle(dt); } };
 gotoFaction();
 requestAnimationFrame(frame);
+if ('serviceWorker' in navigator) addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 </script>
 </body>
 </html>

@@ -1,0 +1,23 @@
+{
+  "id": "/WolfFight/",
+  "name": "Wolf Fight — Arctic vs Jungle",
+  "short_name": "Wolf Fight",
+  "description": "A 3D third-person pack battler. Join the Arctic or Jungle wolves, customize your wolf, and drive the rival pack off the field.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#0d1218",
+  "theme_color": "#0d1218",
+  "categories": ["games", "entertainment"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
